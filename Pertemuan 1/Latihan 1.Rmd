@@ -1,4 +1,20 @@
+---
+title: "Install Packages"
+author: "Sadiida Sumarna"
+date: "2025-08-19"
+output: html_document
+---
+
 ```{r}
+install.packages("forecast")
+install.packages("TTR")
+install.packages("TSA")
+install.packages("graphics")
+install.packages("aTSA")
+install.packages("lmtest")
 install.packages("MLmestrics")
 install.packages("car")
+install.packages("tsibble")
+install.packages("tseries")
+install.packages("nortest")
 ```
