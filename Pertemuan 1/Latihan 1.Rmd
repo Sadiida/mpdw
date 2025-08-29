@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: "Install Packages"
 author: "Sadiida Sumarna"
@@ -20,3 +21,27 @@ output: html_document
 #install.packages("car")
 
 ```
+=======
+---
+title: "Install Packages"
+author: "Sadiida Sumarna"
+date: "2025-08-19"
+output: html_document
+---
+
+```{r}
+#install.packages("forecast")
+#install.packages("tsibble")
+#install.packages("tseries")
+#install.packages("nortest")
+#install.packages("forecast")
+#install.packages("TTR")
+#install.packages("TSA")
+#install.packages("graphics")
+#install.packages("aTSA")
+#install.packages("lmtest")
+#install.packages("MLmestrics")
+#install.packages("car")
+
+```
+>>>>>>> 9ff177b7c961a98a97e9387657203c7ea5e9ba44

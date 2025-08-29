@@ -1,2 +1,2 @@
-# mpdw
+# MPDW
 PRAKTIKUM MPDW 2025
