@@ -1,0 +1,87 @@
+---
+title: "Regresi Spasial"
+author: "Qaulan Sadiida Putri Sumarna"
+date: "2025-08-27"
+output: html_document
+---
+
+```{r}
+library(spatstat)
+library(spatstat.data)
+library(spatstat.geom)
+```
+3 List dataset dari package spatstat
+```{r}
+# data(package = "spatstat.data")
+```
+
+```{r}
+gorillas
+```
+```{r}
+class(gorillas)
+```
+```{r}
+plot(gorillas)
+axis(1)
+axis(2)
+```
+```{r}
+# ambil marks cause saja
+X <- gorillas
+marks(X) <- data.frame(season = marks(gorillas)$season)
+plot(X)
+```
+# Metode Kuadran
+```{r}
+summary(X)
+```
+```{r}
+den <- density(x = X, sigma = 5)
+summary(den)
+```
+```{r}
+plot(den, main = "Intensity")
+contour(den, add = TRUE) # contour plot
+```
+# Quadrat Count
+```{r}
+q <- quadratcount(X, nx = 4, ny = 3)
+q
+```
+```{r}
+plot(q)
+```
+```{r}
+plot(X)
+axis(1)
+axis(2)
+plot(q, add = TRUE, cex = 1.5)
+```
+```{r}
+mu <- mean(q)
+sigma <- sd(q)^2
+VMR <- sigma/mu
+VMR
+```
+Titik cenderung mengelompok
+
+# Metode kedua: Emipirical K-Function
+```{r}
+nn <- nndist(X)
+hist(nn)
+```
+```{r}
+K<- Kest(X, correction="Ripley")
+plot(K)
+```
+```{r}
+E<-envelope(X,Kest, nsim=99)
+```
+```{r}
+plot(E)
+```
+```{r}
+mad.test(X, Kest, nsim=99, alternative="two.sided")
+```
+
