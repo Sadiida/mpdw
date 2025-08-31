@@ -1,0 +1,337 @@
+---
+title: "Tugas Praktikum MPDW M2"
+author: "Qaulan Sadiida Putri Sumarna"
+date: "2025-08-30"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    css: pink_style.css
+---
+
+# Library
+
+```{r}
+library("forecast")
+library("graphics")
+library("TTR")
+library("TSA")
+library(rio)
+library(tseries)
+library(ggplot2)
+```
+
+# Import Data
+
+```{r}
+data_minyak <- import("https://raw.githubusercontent.com/Sadiida/mpdw/main/Pertemuan%202/Data/crude-oil-price.csv")
+head(data_minyak)
+dt <- data_minyak[128:254, c(1, 2) ]
+head(dt)
+```
+
+# Eksplorasi dan Visualisasi Data
+
+## Plot pola musiman
+
+```{r}
+# Ubah data jadi time series bulanan
+ts_minyak <- ts(dt$price, start = c(1993, 10), frequency = 12)
+
+# Plot pola musiman
+ggseasonplot(ts_minyak, year.labels = TRUE, main = "Pola Musiman Harga Minyak")
+
+```
+
+Berdasarkan plot didapatkan bahwa: 1. Pola antar bulan tidak konsisten 2. Fluktuasi antar tahun sangat berbeda 3. Tidak ada musiman yang kuat Sehingga, data harga minyak bulanan dari 1993–2004 tidak menunjukkan pola musiman yang konsisten. Artinya, metode pemulusan yang mengandalkan musiman seperti Holt-Winters musiman mungkin kurang cocok.
+
+## Dekomposisi
+
+```{r}
+dekomposisi <- decompose(ts_minyak)
+plot(dekomposisi)
+```
+
+Berdasarkan plot dekomposisi: 1. Observed: Terlihat ada tren naik dari sekitar 1994 hingga 2001, lalu agak stabil, ada indikasi data dinamis (terlihat beberapa lonjakan dan penurunan tajam). 2. Trend: Terlihat tren naik yang cukup konsisten sampai sekitar 2001 setelah itu tren nampakk cukup datar. 3. Seasonal: Polanya terlihat cukup stabil dan berulang, meskipun tidak terlalu kuat. 4. Random: Terlihat cukup acak, tapi tidak terlalu besar → model bisa bekerja cukup baik. Sehingga data harga minyak bulanan dari 1994–2004 memiliki tren naik yang jelas, musiman yang lemah tapi ada, dan komponen acak yang relatif kecil. Ini menunjukkan bahwa metode pemulusan yang mempertimbangkan tren (seperti Holt) atau tren + musiman (seperti Holt-Winters) layak untuk diuji dan dibandingkan.
+
+## ACF
+
+```{r}
+Acf(ts_minyak, main = "ACF Harga Minyak")
+```
+
+Data harga minyak bulanan menunjukkan autokorelasi jangka pendek yang signifikan, tapi tidak menunjukkan pola musiman tahunan yang kuat. Ini mendukung hasil dari plot musiman dan dekomposisi sebelumnya, sehingga metode pemulusan non-musiman lebih cocok untuk analisis dan peramalan.
+
+```{r}
+View(dt)
+str(dt)
+dim(dt)
+```
+
+## Summary
+
+```{r}
+summary(ts_minyak)
+```
+
+## Plot
+
+```{r}
+ts.plot(ts_minyak, xlab="Time Period ", ylab="Price", 
+        main = "Time Series Plot")
+points(ts_minyak)
+```
+
+Berdasarkan plot didapat: 1. Terdapat pola tren jangka panjang 2. Fluktuasi yang cukup tajam -\> data volatile -\> metode yang terlalu "halus" (seperti SMA) mungkin tidak cocok. 3. Tidak terlihat musiman yang konsisten 4. Data Cukup Stabil di Awal, Lebih Dinamis di Akhir
+
+# Membagi data
+
+```{r}
+# Hitung jumlah data
+n <- nrow(dt)
+
+# Tentukan batas 80% untuk data latih
+n_train <- floor(0.8 * n)
+
+# Bagi data menjadi data latih dan data uji
+training_ma <- dt[1:n_train, ]
+testing_ma  <- dt[(n_train + 1):n, ]
+
+train_ma.ts <- ts(training_ma$price, start = c(1993, 10), frequency = 12)
+
+n_train <- nrow(training_ma)
+
+# Hitung total bulan dari Oktober 1993 ke awal data uji
+start_month_total <- (1993 - 1) * 12 + 10 + n_train  # total bulan sejak Januari tahun 1
+
+# Konversi ke tahun dan bulan
+start_year <- floor((start_month_total - 1) / 12)
+start_month <- ((start_month_total - 1) %% 12) + 1
+
+# Buat time series data uji dengan waktu yang sesuai
+test_ma.ts <- ts(testing_ma$price, start = c(start_year, start_month), frequency = 12)
+```
+
+## Plot data
+
+### data latih
+
+```{r}
+plot(train_ma.ts, col="blue",main="Plot data latih")
+points(train_ma.ts)
+```
+
+### data uji
+
+```{r}
+#eksplorasi data uji
+plot(test_ma.ts, col="blue",main="Plot data uji")
+points(test_ma.ts)
+```
+
+### ggplot
+
+```{r}
+ggplot() + 
+  geom_line(data = training_ma, aes(x = date, y = price, col = "Data Latih")) +
+  geom_line(data = testing_ma, aes(x = date, y = price, col = "Data Uji")) +
+  labs(x = "Periode Waktu", y = "Price", color = "Legend") +
+   scale_colour_manual(name="Keterangan:", breaks = c("Data Latih", "Data Uji"),
+                      values = c("blue", "red")) + 
+  theme_bw() + theme(legend.position = "bottom",
+                     plot.caption = element_text(hjust=0.5, size=12))
+```
+
+# SMA (Single Moving Average) 
+
+```{r}
+# Tentukan window (misalnya 3 bulan)
+window_sma <- 3
+
+# Hitung SMA pada data latih
+sma_train <- SMA(training_ma$price, n = window_sma)
+
+# Buat prediksi untuk data uji
+# Prediksi SMA biasanya menggunakan nilai terakhir dari SMA latih
+# atau kamu bisa hitung SMA pada gabungan data latih + uji
+
+gabungan <- c(training_ma$price, testing_ma$price)
+sma_full <- SMA(gabungan, n = window_sma)
+
+# Ambil bagian prediksi untuk data uji
+start_prediksi <- length(training_ma$price) + 1
+end_prediksi <- length(gabungan)
+prediksi_sma <- sma_full[start_prediksi:end_prediksi]
+
+# Hitung akurasi terhadap data uji
+actual <- testing_ma$price
+MAPE_sma <- mean(abs((actual - prediksi_sma) / actual)) * 100
+MSE_sma  <- mean((actual - prediksi_sma)^2)
+RMSE_sma <- sqrt(MSE_sma)
+SSE_sma  <- sum((actual - prediksi_sma)^2)
+
+# Tampilkan hasil
+cat("MAPE:", MAPE_sma, "\nMSE:", MSE_sma, "\nRMSE:", RMSE_sma, "\nSSE:", SSE_sma)
+```
+
+# DMA (Double Moving Average)
+
+```{r}
+# Tentukan window (misalnya 3 bulan)
+window_dma <- 3
+
+# Gabungkan data latih dan uji untuk prediksi penuh
+gabungan <- c(training_ma$price, testing_ma$price)
+
+# Langkah 1: SMA pertama
+sma1 <- SMA(gabungan, n = window_dma)
+
+# Langkah 2: SMA dari SMA pertama
+sma2 <- SMA(sma1, n = window_dma)
+
+# Hitung prediksi DMA (rumus: 2*SMA1 - SMA2)
+dma_prediksi <- 2 * sma1 - sma2
+
+# Ambil bagian prediksi untuk data uji
+start_prediksi <- length(training_ma$price) + 1
+end_prediksi <- length(gabungan)
+prediksi_dma <- dma_prediksi[start_prediksi:end_prediksi]
+
+# Hitung akurasi terhadap data uji
+actual <- testing_ma$price
+MAPE_dma <- mean(abs((actual - prediksi_dma) / actual)) * 100
+MSE_dma  <- mean((actual - prediksi_dma)^2)
+RMSE_dma <- sqrt(MSE_dma)
+SSE_dma  <- sum((actual - prediksi_dma)^2)
+
+# Tampilkan hasil
+cat("MAPE:", MAPE_dma, "\nMSE:", MSE_dma, "\nRMSE:", RMSE_dma, "\nSSE:", SSE_dma)
+```
+
+Berdasarkan metode Moving Average, didapat nilai MAPE yang lebih baik untuk DMA dibanding SMA hal ini selaras dengan teori bahwa DMA lebih cocok untuk data yang memiliki pola tren.
+
+# SES (Single Exponential Smoothing)
+
+```{r}
+library(forecast)
+
+# SES alpha = 0.2
+model_ses_02 <- ses(train_ma.ts, h = length(test_ma.ts), alpha = 0.2)
+forecast_ses_02 <- forecast(model_ses_02)
+prediksi_ses_02 <- window(forecast_ses_02$mean, start = start(test_ma.ts), end = end(test_ma.ts))
+
+# SES alpha = 0.7
+model_ses_07 <- ses(train_ma.ts, h = length(test_ma.ts), alpha = 0.7)
+forecast_ses_07 <- forecast(model_ses_07)
+prediksi_ses_07 <- window(forecast_ses_07$mean, start = start(test_ma.ts), end = end(test_ma.ts))
+
+# SES alpha optimal
+model_ses_opt <- ses(train_ma.ts, h = length(test_ma.ts))
+forecast_ses_opt <- forecast(model_ses_opt)
+prediksi_ses_opt <- window(forecast_ses_opt$mean, start = start(test_ma.ts), end = end(test_ma.ts))
+
+# Data aktual
+actual <- test_ma.ts
+
+# Hitung akurasi manual
+mape <- function(actual, pred) mean(abs((actual - pred) / actual)) * 100
+mse  <- function(actual, pred) mean((actual - pred)^2)
+rmse <- function(actual, pred) sqrt(mse(actual, pred))
+sse  <- function(actual, pred) sum((actual - pred)^2)
+
+# Tampilkan hasil
+cat("SES alpha = 0.2\n")
+cat("MAPE:", mape(actual, prediksi_ses_02), "\nMSE:", mse(actual, prediksi_ses_02),
+    "\nRMSE:", rmse(actual, prediksi_ses_02), "\nSSE:", sse(actual, prediksi_ses_02), "\n\n")
+
+cat("SES alpha = 0.7\n")
+cat("MAPE:", mape(actual, prediksi_ses_07), "\nMSE:", mse(actual, prediksi_ses_07),
+    "\nRMSE:", rmse(actual, prediksi_ses_07), "\nSSE:", sse(actual, prediksi_ses_07), "\n\n")
+
+cat("SES alpha = optimal\n")
+cat("MAPE:", mape(actual, prediksi_ses_opt), "\nMSE:", mse(actual, prediksi_ses_opt),
+    "\nRMSE:", rmse(actual, prediksi_ses_opt), "\nSSE:", sse(actual, prediksi_ses_opt), "\n")
+```
+
+#DES (Double Exponential Smoothing)
+
+```{r}
+# DES dengan alpha dan beta default (dipilih otomatis oleh R)
+model_des_opt <- holt(train_ma.ts, h = length(test_ma.ts))
+forecast_des_opt <- forecast(model_des_opt)
+prediksi_des_opt <- window(forecast_des_opt$mean, start = start(test_ma.ts), end = end(test_ma.ts))
+
+# Kasus 1: alpha = 0.2, beta = 0.2
+model_des_1 <- holt(train_ma.ts, h = length(test_ma.ts), alpha = 0.2, beta = 0.2)
+forecast_des_1 <- forecast(model_des_1)
+prediksi_des_1 <- window(forecast_des_1$mean, start = start(test_ma.ts), end = end(test_ma.ts))
+
+# Kasus 2: alpha = 0.6, beta = 0.3
+model_des_2 <- holt(train_ma.ts, h = length(test_ma.ts), alpha = 0.6, beta = 0.3)
+forecast_des_2 <- forecast(model_des_2)
+prediksi_des_2 <- window(forecast_des_2$mean, start = start(test_ma.ts), end = end(test_ma.ts))
+
+# Data aktual
+actual <- test_ma.ts
+
+# Fungsi akurasi manual
+mape <- function(actual, pred) mean(abs((actual - pred) / actual)) * 100
+mse  <- function(actual, pred) mean((actual - pred)^2)
+rmse <- function(actual, pred) sqrt(mse(actual, pred))
+sse  <- function(actual, pred) sum((actual - pred)^2)
+
+# Tampilkan hasil
+cat("DES (Holt) - alpha & beta optimal\n")
+cat("MAPE:", mape(actual, prediksi_des_opt), "\nMSE:", mse(actual, prediksi_des_opt),
+    "\nRMSE:", rmse(actual, prediksi_des_opt), "\nSSE:", sse(actual, prediksi_des_opt), "\n\n")
+
+cat("DES - alpha = 0.2, beta = 0.2\n")
+cat("MAPE:", mape(actual, prediksi_des_1), "\nMSE:", mse(actual, prediksi_des_1),
+    "\nRMSE:", rmse(actual, prediksi_des_1), "\nSSE:", sse(actual, prediksi_des_1), "\n\n")
+
+cat("DES - alpha = 0.6, beta = 0.3\n")
+cat("MAPE:", mape(actual, prediksi_des_2), "\nMSE:", mse(actual, prediksi_des_2),
+    "\nRMSE:", rmse(actual, prediksi_des_2), "\nSSE:", sse(actual, prediksi_des_2), "\n")
+```
+
+Untuk metode Exponential didapat nilai MAPE paling rendah pada Doubel Exponential Smoothing dengan alpha=.6 dan beta=0.3. Namun, nilai MAPE tersebut tidak lebih kecil dari nilai MAPE untuk metode DMA (Double Moving Average).
+
+# Visualisasi hasil aktual dan prediksi dengan metode terbaik
+
+```{r}
+# Gabungkan data aktual dan prediksi DMA
+n_train <- nrow(training_ma)
+gabungan <- c(training_ma$price, testing_ma$price)
+sma1 <- SMA(gabungan, n = 3)
+sma2 <- SMA(sma1, n = 3)
+dma <- 2 * sma1 - sma2
+
+# Ambil prediksi DMA untuk data uji
+start_prediksi <- n_train + 1
+end_prediksi <- length(gabungan)
+prediksi_dma <- dma[start_prediksi:end_prediksi]
+
+# Buat data frame untuk plotting
+df_plot <- data.frame(
+  Time = time(test_ma.ts),
+  Actual = testing_ma$price,
+  Prediksi_DMA = prediksi_dma
+)
+
+# Plot
+ggplot(df_plot, aes(x = Time)) +
+  geom_line(aes(y = Actual), color = "black", size = 1, linetype = "solid") +
+  geom_line(aes(y = Prediksi_DMA), color = "blue", size = 1, linetype = "dashed") +
+  labs(title = "Prediksi DMA vs Data Aktual",
+       y = "Harga Minyak",
+       x = "Waktu") +
+  theme_minimal()
+```
+
+DMA memberikan prediksi yang stabil dan cukup akurat secara tren, meskipun tidak menangkap fluktuasi ekstrem. Ini cocok untuk data seperti harga minyak yang punya tren ringan dan noise moderat.
+
+# Kesimpulan
+
+Berdasarkan eksplorasi dan evaluasi berbagai metode pemulusan terhadap data harga minyak bulanan, ditemukan bahwa Double Moving Average (DMA) memberikan performa terbaik dengan nilai MAPE paling rendah. Meskipun metode seperti Simple Exponential Smoothing (SES) dan Double Exponential Smoothing (DES) menawarkan pendekatan yang lebih kompleks, hasil empiris menunjukkan bahwa stabilitas dan kesederhanaan DMA justru lebih efektif dalam menangkap tren ringan dan fluktuasi moderat pada data.
+
+Visualisasi prediksi DMA terhadap data aktual memperkuat temuan ini: garis prediksi mengikuti arah umum tren dengan cukup baik, meskipun ada sedikit keterlambatan dalam merespons lonjakan tajam. Kesimpulannya, untuk data deret waktu yang tidak menunjukkan pola musiman dan memiliki tren bertahap, DMA merupakan pilihan yang paling akurat dan stabil di antara metode yang telah diuji.
