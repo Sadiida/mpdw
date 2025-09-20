@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* pink_style.css */
 
 /* Mengatur font dasar dan warna latar belakang utama */
@@ -45,4 +46,53 @@ a:hover {
 code {
   background-color: #FFEDF0; /* Latar belakang pink muda untuk kode */
   color: #862E52;
+=======
+/* pink_style.css */
+
+/* Mengatur font dasar dan warna latar belakang utama */
+body {
+  font-family: 'Georgia', serif;
+  background-color: #FFF5F7; /* Warna latar pink sangat muda */
+  color: #5C3C41; /* Warna teks coklat tua */
+}
+
+/* Menata judul utama */
+h1, h2, h3, h4, h5, h6 {
+  color: #D6336C; /* Warna pink tua untuk judul */
+}
+
+/* Menata link */
+a, a:visited {
+  color: #AD1A73; /* Warna magenta untuk link */
+  text-decoration: none;
+}
+
+a:hover {
+  color: #D6336C;
+  text-decoration: underline;
+}
+
+/* Menata daftar isi (TOC) yang mengambang */
+.tocify {
+  border-color: #FFDDE2;
+  background-color: #FFFFFF;
+}
+
+.tocify-header {
+  background-color: #FFDDE2; /* Latar belakang header TOC */
+  color: #862E52;
+  border-bottom: 1px solid #FFDDE2;
+}
+
+/* Menata item aktif di daftar isi */
+.tocify-item.active > a {
+  color: #D6336C !important; /* Warna pink tua untuk item aktif */
+  font-weight: bold;
+}
+
+/* Mengubah warna blok kode */
+code {
+  background-color: #FFEDF0; /* Latar belakang pink muda untuk kode */
+  color: #862E52;
+>>>>>>> 91b7f7992a74b84a31b6604c45f800fe66c6b3a4
 }
