@@ -296,7 +296,7 @@ Meskipun nilai autokorelasi empiris hingga lag ke-3 menunjukkan kedekatan dengan
 
 # ARMA(2,2)
 
-Dalam kasus ini, akan dibangkitkan suatu data dengan model ARMA(2,2) sebanyak 300 data yang memiliki nilai $\phi_1 = 0.5$ dan $\phi_2 = 0.2$ serta $\theta_1 = 0.4$ dan $\theta_2 = 0.6$. Rumusan model tersebut adalah sebagai berikut
+Dalam kasus ini, akan dibangkitkan suatu data dengan model ARMA(2,2) sebanyak 300 data yang memiliki nilai $\phi_1 = 0.5$ dan $\phi_2 = 0.2$ serta $\theta_1 = 0.4$ dan $\theta_2 = 0.6$. Rumusan model tersebut adalah sebagai berikut:
 
 $$ Y_t = 0.5Y_{t-1}+0.2Y_{t-2}+e_t-0.4_{t-1}-0.6_{t-2} $$
 
