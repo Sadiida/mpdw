@@ -1,0 +1,139 @@
+---
+title: "Penanganan Autokorelasi (Cochrane-Orcutt dan Hildreth-Lu)"
+author: "Sadiida"
+output: 
+  rmdformats::readthedown:
+    highlight: "kate"
+    number_sections: true
+---
+
+# Library
+```{r}
+library(lmtest)
+library(readxl)
+library(orcutt)
+```
+
+
+# Import Data
+```{r}
+dt <- read_excel("~/IPB Kuliah/Semester 5/MPDW/Pertemuan 3/IPM Samarinda 2010-2024.xlsx")
+dt
+
+# Konversi ke data time series tahunan
+ipm_ts <- ts(dt$IPM, start = min(dt$Tahun), frequency = 1)
+```
+
+# Plot IPM Samarinda
+```{r}
+plot(ipm_ts, type = "o", col = "blue", lwd = 2,
+     main = "Tren IPM Kota Samarinda (2010–2024)",
+     xlab = "Tahun", ylab = "IPM")
+
+```
+# Pemodelan Linier
+```{r}
+model_lm <- lm(IPM ~ Tahun, data = dt)
+summary(model_lm)
+```
+
+# Deteksi Autokorelasi
+
+## Uji Autokorelasi : Durbin Watson
+```{r}
+dwtest(model_lm)
+```
+karena p-value < 0.05 → indikasi autokorelasi positif
+
+## Plot Residual terhadap Waktu
+```{r}
+resid_lm <- residuals(model_lm)
+
+plot(dt$Tahun, resid_lm, type = "o", col = "red", lwd = 2,
+     main = "Residual Model Linier terhadap Waktu",
+     xlab = "Tahun", ylab = "Residual")
+
+```
+
+Berdasarkan visualisasi residual model linier terhadap waktu, terlihat pola naik-turun yang berurutan, yang mengindikasikan adanya autokorelasi secara visual.
+
+## Uji ACF dan PACF
+```{r}
+# Konversi residual ke time series
+resid_ts <- ts(resid_lm, start = min(dt$Tahun), frequency = 1)
+
+# Plot ACF dan PACF
+acf(resid_ts, main = "ACF Residual Model Linier")
+pacf(resid_ts, main = "PACF Residual Model Linier")
+```
+Meskipun hasil uji ACF dan PACF tidak menunjukkan autokorelasi yang signifikan, uji Durbin-Watson dan pola fluktuatif pada residual secara visual mengindikasikan adanya potensi autokorelasi. Oleh karena itu, dilakukan penerapan metode Cochrane-Orcutt dan Hildreth-Lu sebagai pendekatan korektif untuk menguji efektivitas penanganan autokorelasi pada model.
+
+# Penanganan Autokorelasi
+
+## Cochrane-Orcutt
+Dalam analisis ini digunakan fungsi cochrane.orcutt() dari package orcutt yang secara otomatis melakukan estimasi parameter autokorelasi (rho) dan transformasi variabel sesuai prosedur Cochrane-Orcutt. Meskipun tidak dilakukan transformasi manual seperti yang dijelaskan dalam ppt kuliah, fungsi ini telah mengimplementasikan prinsip yang sama secara komputasional.
+
+```{r}
+model_co <- cochrane.orcutt(model_lm)
+summary(model_co)
+```
+```{r}
+# Lihat nilai rho (estimasi autokorelasi)
+model_co$rho
+
+# Lihat model baru setelah koreksi
+model_co$coefficients
+```
+Setelah dilakukan koreksi autokorelasi dengan metode Cochrane-Orcutt, diperoleh nilai rho sebesar 0.3345 yang menunjukkan adanya autokorelasi positif sedang. Meskipun nilai R² menurun dari 0.9769 menjadi 0.9570, model hasil koreksi dinilai lebih memenuhi asumsi independensi residual dan lebih valid secara statistik.
+
+Namun, untuk validasi lebih lanjut dilakukan dwtest lagi untuk model Cochrane-Orcutt
+```{r}
+dwtest(model_co)
+```
+Meskipun telah dilakukan koreksi autokorelasi dengan metode Cochrane-Orcutt, hasil uji Durbin-Watson menunjukkan nilai DW sebesar 1.0972 dengan p-value 0.01327. Hal ini mengindikasikan bahwa autokorelasi residual masih signifikan, sehingga model hasil koreksi belum sepenuhnya memenuhi asumsi independensi residual.
+
+## Hildreth-Lu
+```{r}
+# Simpan residual dan prediktor
+resid_lm <- residuals(model_lm)
+x <- dt$Tahun
+y <- dt$IPM
+
+# Fungsi untuk menghitung SSE berdasarkan nilai rho
+sse_rho <- function(rho) {
+  y_star <- y[-1] - rho * y[-length(y)]
+  x_star <- x[-1] - rho * x[-length(x)]
+  model_star <- lm(y_star ~ x_star)
+  sum(residuals(model_star)^2)
+}
+
+# Cari nilai rho yang meminimalkan SSE
+opt_rho <- optimize(sse_rho, interval = c(-1, 1))$minimum
+opt_rho
+
+```
+Estimasi rho sebesar 0.3345 dari metode Hildreth-Lu mengindikasikan autokorelasi positif sedang, sehingga dilakukan transformasi variabel untuk membentuk model koreksi.
+
+```{r}
+# Transformasi variabel dengan rho optimal
+y_star <- y[-1] - opt_rho * y[-length(y)]
+x_star <- x[-1] - opt_rho * x[-length(x)]
+
+# Model Hildreth-Lu
+model_hl <- lm(y_star ~ x_star)
+summary(model_hl)
+
+```
+
+```{r}
+dwtest(model_hl)
+```
+Hasil uji Durbin-Watson terhadap model Hildreth-Lu menunjukkan nilai DW sebesar 1.0972 dengan p-value 0.01327, yang mengindikasikan bahwa autokorelasi residual masih signifikan. Hal ini menunjukkan bahwa koreksi autokorelasi dengan metode Hildreth-Lu belum sepenuhnya efektif dalam menghilangkan keterkaitan antar residual.
+
+# Kesimpulan
+Berdasarkan hasil uji Durbin-Watson, baik sebelum maupun sesudah koreksi, diketahui bahwa autokorelasi residual masih signifikan secara statistik. Nilai DW pada model awal sebesar 1.0545 (p-value = 0.00906), dan setelah koreksi dengan metode Cochrane-Orcutt maupun Hildreth-Lu, nilai DW hanya meningkat sedikit menjadi 1.0972 (p-value = 0.01327). Hal ini menunjukkan bahwa kedua metode belum mampu sepenuhnya menghilangkan autokorelasi.
+
+Meskipun nilai rho sebesar 0.3345 berhasil ditaksir dan digunakan untuk transformasi, serta nilai R² menurun dari 0.9769 menjadi 0.9570 (menandakan penyesuaian model terhadap asumsi), autokorelasi tetap terdeteksi. SSE memang berkurang, dan koefisien regresi menjadi lebih stabil, namun residual masih menunjukkan keterkaitan antar waktu.
+
+Dengan demikian, model hasil koreksi belum sepenuhnya valid secara asumsi klasik regresi. Hal ini mengindikasikan bahwa pendekatan Cochrane-Orcutt dan Hildreth-Lu belum cukup efektif dalam menangani struktur autokorelasi pada data IPM Kota Samarinda. Oleh karena itu, diperlukan pendekatan alternatif, seperti model time series yang lebih kompleks (misalnya ARIMA), atau penambahan variabel yang dapat menjelaskan dinamika temporal secara lebih akurat.
+

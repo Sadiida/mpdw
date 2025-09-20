@@ -142,7 +142,7 @@ ggplot() +
                      plot.caption = element_text(hjust=0.5, size=12))
 ```
 
-# SMA (Single Moving Average) 
+# SMA (Single Moving Average)
 
 ```{r}
 # Tentukan window (misalnya 3 bulan)

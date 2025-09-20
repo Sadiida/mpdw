@@ -16,10 +16,11 @@ library(tseries)
 library(ggplot2)
 
 ```
+
 # Import Data
 ```{r}
 data_minyak <- import("https://raw.githubusercontent.com/Sadiida/mpdw/main/Pertemuan%202/Data/crude-oil-price.csv")
-head(data1)
+head(data_minyak)
 ```
 
 # Memilih data
@@ -38,7 +39,7 @@ dim(dt)
 ## Mengubah data agar terbaca sebagai data deret waktu
 ```{r}
 dt.ts <- ts(dt$price)
-summary(dt.ds)
+summary(dt.ts)
 ```
 ## Plot data deret waktu
 ```{r}
@@ -90,7 +91,7 @@ ggplot() +
 
 ## SMA (Single Moving Average)
 ```{r}
-data.sma<-SMA(train_ma.ts, n=4)
+data.sma<-SMA(train_ma.ts, n=12)
 data.sma
 ```
 ```{r}
@@ -101,14 +102,14 @@ data.ramal #forecast 1 periode ke depan
 ```{r}
 data.gab<-cbind(
   aktual=c(dt.ts),
-  pemulusan=c(data.sma,rep(NA,24)),
-  ramalan=c(data.ramal,rep(data.ramal[length(data.ramal)],23)))
+  pemulusan=c(data.sma,rep(NA,12)),
+  ramalan=c(data.ramal,rep(data.ramal[length(data.ramal)],11)))
 
-data.gab #forecast 24 periode ke depan
+data.gab #forecast 12 periode ke depan
 ```
 ###  Perbandingan
 ```{r}
-ts.plot(dt.ts, xlab="Time Period ", ylab="Price", main= "SMA N=4 Data Prices")
+ts.plot(dt.ts, xlab="Time Period ", ylab="Price", main= "SMA N=12 Data Prices")
 points(dt.ts)
 lines(data.gab[,2],col="green",lwd=2)
 lines(data.gab[,3],col="red",lwd=2)
