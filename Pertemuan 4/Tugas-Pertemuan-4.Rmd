@@ -46,15 +46,20 @@ ma2
 ```{r}
 ts.plot(ma)
 ```
-Berdasarkan plot time series, terlihat bahwa data MA(2) yang dibangkitkan stasioner dalam rataan
+Berdasarkan plot time series, terlihat bahwa data MA(2) yang dibangkitkan stasioner dalam rataan.
 
 ### Plot ACF
 
 ```{r}
-acf(ma,lag.max = 20)
+hasil_acf <- acf(ma,lag.max = 20)
 ```
 
 Berdasarkan plot AFC tersebut, terlihat bahwa plot ACF *cuts off* di lag kedua.
+
+```{r}
+hasil_acf
+```
+
 
 ### Plot PACF
 
@@ -70,7 +75,7 @@ Berdasarkan plot PACF tersebut, terlihat bahwa plot PACF cenderung *tails off* d
 TSA::eacf(ma)
 ```
 
-Berdasarkan pola segitiga nol pada plot EACF, terlihat bahwa segitiga nol berada pada ordo AR(1) dan ordo MA(3).
+Berdasarkan pola segitiga nol pada plot EACF, terlihat bahwa segitiga nol berada pada ordo AR(0) dan ordo MA(2) meskipun tidak sempurna namun hal ini bisa mendukung model MA(2).
 
 ### Scatterplot Antar Lag
 
@@ -131,7 +136,7 @@ $$
 yt_ma3 <- ma[-c(1,2,3)]
 yt_ma3
 
-yt_3_ma <- ma[-c(288, 299,300)]
+yt_3_ma <- ma[-c(298, 299,300)]
 yt_3_ma
 ```
 
@@ -145,10 +150,20 @@ Berdasarkan scatterplot tersebut, terlihat bahwa $Y_t$ dan $Y_{t-3}$ sudah menun
 cor(yt_ma3,yt_3_ma)
 ```
 
-Korelasi antara $Y_t$ dengan $Y_{t-3}$ dari hasil simulasi juga belum mendekati nilai teoritis yang menyatakan bahwa $\rho_k=0$ untuk k>q.
+Korelasi antara $Y_t$ dengan $Y_{t-3}$ dari hasil simulasi cukup mendekati nilai teoritis yang menyatakan bahwa $\rho_k=0$ untuk k>q.
 
 ### Kesimpulan
-Berdasarkan perbandingan nilai autokorelasi empiris dan teoritis pada model MA(2), yaitu ρ₁ = –0.035 vs –0.105, ρ₂ = –0.44 vs –0.395, dan ρ₃ = –0.122 vs 0, terlihat bahwa meskipun nilai-nilainya cukup mendekati secara kuantitatif, terdapat ketidaksesuaian pola—terutama pada ρ₃ yang seharusnya nol—sehingga model MA(2) menunjukkan kecocokan parsial (MA(2) mungkin menangkap sebagian dinamika data, tapi tidak cukup untuk menjelaskan keseluruhan pola korelasi.) terhadap data bangkitan, namun belum sepenuhnya konsisten secara struktural.
+Berdasarkan analisis, data bangkitan menunjukkan karakteristik yang sangat konsisten dengan model teoretis MA(2). Plot ACF cut off dengan jelas setelah lag 2, yang merupakan penanda utama model MA(2).
+
+Konsistensi ini juga didukung oleh perbandingan nilai autokorelasi, di mana nilai empiris dari data bangkitan cukup mendekati nilai teoretisnya:
+
+ρ₁: –0.035 vs –0.105
+
+ρ₂: –0.44 vs –0.395
+
+ρ₃: –0.088 vs 0
+
+Meskipun tidak identik, perbedaan yang ada dapat diatribusikan pada variabilitas acak yang wajar terjadi pada simulasi data. Nilai ρ₃ yang kecil dan kemungkinan tidak signifikan secara statistik tetap sejalan dengan teori model MA(2) yang autokorelasinya menjadi nol setelah lag 2. Dengan demikian, dapat disimpulkan bahwa simulasi data telah berhasil merepresentasikan struktur dan pola korelasi dari sebuah proses MA(2) secara memadai.
 
 # AR(2)
 
@@ -352,7 +367,7 @@ Berdasarkan plot PACF tersebut, terlihat bahwa model ARMA(2,2) hasil simulasi me
 TSA::eacf(y.arma)
 ```
 
-Berdasarkan pola segitiga nol pada plot EACF, terlihat bahwa segitiga nol berada pada ordo AR(4) dan ordo MA(0)
+Berdasarkan pola segitiga nol pada plot EACF, terlihat bahwa segitiga nol berada pada ordo AR(4) dan ordo MA(0).
 
 ### Scatterplot Antar Lag
 
