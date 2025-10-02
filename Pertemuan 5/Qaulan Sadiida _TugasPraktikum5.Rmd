@@ -1,0 +1,130 @@
+---
+title: "Penanganan Stasioneritas"
+author: "Qaulan Sadiida Putri Sumarna"
+date: "2025-10-01"
+output:
+  html_document:
+    theme: yeti
+    toc: true
+    toc_float: true
+  word_document: default
+  pdf_document: default
+---
+# Library
+
+```{r}
+library(rio)
+library(dplyr)
+library(lubridate)
+library(tseries)
+library(forecast)
+library(ggplot2)
+library(MASS)
+```
+
+# Import Data
+```{r}
+data_minyak <- import("https://raw.githubusercontent.com/Sadiida/mpdw/main/Pertemuan%202/Data/crude-oil-price.csv")
+
+head(data_minyak)
+```
+```{r}
+dt <- data_minyak[128:254, c(1, 2) ]
+head(dt)
+```
+```{r}
+# Ubah data jadi time series bulanan
+ts_minyak <- ts(dt$price, start = c(1993, 10), frequency = 12)
+```
+
+# Plot deret waktu
+```{r}
+plot(dt$date, dt$price, type = 'l', 
+     xlab = "Tahun", ylab = "Harga Minyak", 
+     main = "Plot Deret Waktu Harga Minyak Mentah")
+```
+```{r}
+# Plot deret waktu dengan ggplot2
+ggplot(dt, aes(x = date, y = price)) +
+  geom_line(color = "pink", linewidth = 1) +
+  labs(
+    title = "Plot Deret Waktu Harga Minyak Mentah",
+    x = "Tahun",
+    y = "Harga Minyak"
+  ) +
+  theme_minimal()
+```
+
+Jika dilihat dari plot deret waktu, data dapat dikatakan tidak stasioner baik dalam rataan dan ragam. Namun, untuk memastikan dilakukan uji yang lebih lanjut.
+
+# Cek Stasionerits dalam Rataan
+## Plot ACF
+```{r}
+Acf(ts_minyak, main = "ACF Harga Minyak")
+```
+
+## Uji ADF
+
+$H_0$ : Data tidak stasioner dalam rataan
+
+$H_1$ : Data stasioner dalam rataan
+
+```{r}
+tseries::adf.test(ts_minyak)
+```
+Berdasarkan uji ADF tersebut, didapat *p-value* sebesar 0.05437 yang lebih
+besar dari taraf nyata 5% sehingga gagal menolak $H_0$ dan menandakan bahwa data
+**tidak stasioner dalam rataan**. Hal ini sesuai dengan hasil eksplorasi
+menggunakan plot time series dan plot ACF yang turun secara perlahan (slow decay).
+
+# Cek stasioneritas dalam Ragam
+## Box-Cox
+```{r}
+bc <- boxcox(ts_minyak ~ time(ts_minyak),
+       main = "Plot Diagnostik Box-Cox",
+       xlab = "Lambda (λ)",
+       ylab = "Log-Likelihood"
+)
+```
+```{r}
+# Nilai lambda optimum
+lambda <- bc$x[which.max(bc$y)]
+lambda
+```
+Jika nilai lambda jauh dari 1, ini adalah indikasi kuat bahwa ragam data tidak stasioner dan perlu ditransformasi. Namun, lamda optimum menunjukkan angka yang dekat dengan angka 1 yaitu, 0.748. Sehingga untuk memastikan ulang, dicek selang kepercayaan untuk lamda.
+
+```{r}
+# Selang kepercayaan 95% untuk lambda
+ci_lambda <- bc$x[bc$y > max(bc$y) - 0.5 * qchisq(0.95, 1)]
+
+# Batas bawah dan batas atas
+ci_lower <- min(ci_lambda)
+ci_upper <- max(ci_lambda)
+
+c(Batas_Bawah = ci_lower, Batas_Atas = ci_upper)
+```
+Karena selang kepercayaan 95% (0.222 – 1.232) memuat nilai 1, maka tidak ada cukup bukti statistik untuk menyatakan bahwa ragam data tidak stasioner. Oleh karena itu, transformasi Box-Cox tidak diperlukan.
+
+# Kesimpulan
+Sehingga didapat bahwa, data tidak stasioner dalam rataan namun stasioner dalam ragam. Sehingga perlu penanganan untuk ketidakstasioneran rataan.
+
+# Penanganan: Differencing
+```{r}
+# Differencing pertama pada postrend
+diff1 <- diff(ts_minyak, differences = 1)
+
+# Plot hasil differencing
+ts.plot(diff1,
+        main = "First-order Differencing dari ts_minyak",
+        col = "pink", lwd = 2)
+```
+## Cek Stasioneritas Rataan
+### Plot ACF
+```{r}
+acf(diff1)
+```
+### Uji ADF
+```{r}
+adf.test(diff1)
+```
+Berdasarkan uji ADF tersebut, didapat p-value sebesar 0.01 yang lebih kecil dari taraf nyata 5% sehingga tolak dan menandakan bahwa data sudah stasioner dalam rataan. Hal ini sesuai dengan hasil eksplorasi menggunakan plot time series dan plot ACF.
